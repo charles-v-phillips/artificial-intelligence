@@ -3,12 +3,12 @@ from itertools import chain, combinations
 from aimacode.planning import Action
 from aimacode.utils import expr
 
-from layers import BaseActionLayer, BaseLiteralLayer, makeNoOp, make_node
+from layers import BaseActionLayer, BaseLiteralLayer, makeNoOp, make_node, ActionNode
 
 
 class ActionLayer(BaseActionLayer):
 
-    def _inconsistent_effects(self, actionA, actionB):
+    def _inconsistent_effects(self, actionA: ActionNode, actionB : ActionNode) :
         """ Return True if an effect of one action negates an effect of the other
 
         Hints:
@@ -19,8 +19,16 @@ class ActionLayer(BaseActionLayer):
         --------
         layers.ActionNode
         """
+        for effectA in actionA.effects:
+            for effectB in actionB.effects:
+                if effectA == ~effectB:
+                    return True
+
+        return False
+
         # TODO: implement this function
         raise NotImplementedError
+
 
 
     def _interference(self, actionA, actionB):
@@ -34,11 +42,18 @@ class ActionLayer(BaseActionLayer):
         --------
         layers.ActionNode
         """
+        for effectA in actionA.effects:
+            for preconditionB in actionB.preconditions:
+                if effectA == ~preconditionB:
+                    return True
+
+        return False
         # TODO: implement this function
         raise NotImplementedError
 
-    def _competing_needs(self, actionA, actionB):
+    def _competing_needs(self, actionA : ActionNode, actionB : ActionNode):
         """ Return True if any preconditions of the two actions are pairwise mutex in the parent layer
+
 
         Hints:
             (1) `self.parent_layer` contains a reference to the previous literal layer
@@ -49,6 +64,11 @@ class ActionLayer(BaseActionLayer):
         layers.ActionNode
         layers.BaseLayer.parent_layer
         """
+        for preA in actionA.preconditions:
+            for preB in actionB.preconditions:
+                if self.parent_layer.is_mutex(preA,preB):
+                    return True
+        return False
         # TODO: implement this function
         raise NotImplementedError
 
@@ -56,6 +76,14 @@ class ActionLayer(BaseActionLayer):
 class LiteralLayer(BaseLiteralLayer):
 
     def _inconsistent_support(self, literalA, literalB):
+        for actionA in self.parents[literalA]:
+            for actionB in self.parents[literalB]:
+                if self.parent_layer.is_mutex(actionA,actionB) is False:
+                    return False
+
+
+
+
         """ Return True if all ways to achieve both literals are pairwise mutex in the parent layer
 
         Hints:
@@ -66,11 +94,13 @@ class LiteralLayer(BaseLiteralLayer):
         --------
         layers.BaseLayer.parent_layer
         """
+        return True
         # TODO: implement this function
         raise NotImplementedError
 
     def _negation(self, literalA, literalB):
         """ Return True if two literals are negations of each other """
+        return literalA == ~literalB
         # TODO: implement this function
         raise NotImplementedError
 
@@ -110,7 +140,56 @@ class PlanningGraph:
         self.literal_layers = [layer]
         self.action_layers = []
 
+    def goalAchieved(self,litLayer):
+        for g in self.goal:
+            if g not in litLayer:
+                return False
+        return True
+
+    def noMutexLinks(self,litLayer):
+        for g1 in self.goal:
+            for g2 in self.goal:
+                if litLayer.is_mutex(g1, g2):
+                    return False
+        return True
+    def h_levelcost(self,goal):
+
+        for index, layer in enumerate(self.literal_layers):
+            if goal in layer:
+                return index
+
+
+
+
+
     def h_levelsum(self):
+        cost = []
+        while not self._is_leveled:
+            layer = self.literal_layers[-1]
+            if self.goalAchieved(layer):
+                for g in self.goal:
+                    cost.append(self.h_levelcost(g))
+                return sum(cost)
+            self._extend()
+
+        # cost = []
+        # unfound = [g for g in self.goal]
+        # while not self._is_leveled and len(unfound) is not 0:
+        #     layer = self.literal_layers[-1]
+        #     for g in unfound:
+        #         if g in layer:
+        #             cost.append(self.h_levelcost(g))
+        #             unfound.remove(g)
+        #     self._extend()
+        #
+        # return sum(cost)
+
+
+        # self.fill()
+        # for g in self.goal:
+        #     cost.append(self.h_levelcost(g))
+        # return sum(cost)
+
         """ Calculate the level sum heuristic for the planning graph
 
         The level sum is the sum of the level costs of all the goal literals
@@ -139,6 +218,23 @@ class PlanningGraph:
         raise NotImplementedError
 
     def h_maxlevel(self):
+        # cost = []
+        # self.fill()
+        # for g in self.goal:
+        #     cost.append(self.h_levelcost(g))
+        # return max(cost)
+        cost = []
+        while not self._is_leveled:
+            layer = self.literal_layers[-1]
+            if self.goalAchieved(layer):
+                for g in self.goal:
+                    cost.append(self.h_levelcost(g))
+                return max(cost)
+            self._extend()
+
+
+
+
         """ Calculate the max level heuristic for the planning graph
 
         The max level is the largest level cost of any single goal fluent.
@@ -165,10 +261,30 @@ class PlanningGraph:
         -----
         WARNING: you should expect long runtimes using this heuristic with A*
         """
+
         # TODO: implement maxlevel heuristic
         raise NotImplementedError
 
     def h_setlevel(self):
+
+
+
+
+        l = 0
+        while not self._is_leveled:
+
+            frontier = self.literal_layers[-1]
+            if self.goalAchieved(frontier) and self.noMutexLinks(frontier):
+                return l
+            self._extend()
+
+            l+=1
+
+
+
+        return -1
+
+
         """ Calculate the set level heuristic for the planning graph
 
         The set level of a planning graph is the first level where all goals
