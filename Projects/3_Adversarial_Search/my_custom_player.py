@@ -8,7 +8,6 @@ beam_width = 9  # branching factor essentially
 depth = 5
 
 
-
 class TreeNode:
     def __init__(self, boardState,parent,action):
         self.board_state = boardState
@@ -19,43 +18,54 @@ class TreeNode:
         self.action = action
 
 
-def ucb1(node):
-    exploit = node.v
-    explore = 2*math.sqrt(math.log(node.parent.n,math.e)/node.n)
-    return explore + exploit
-
-def traverse(node):
-    current = node
-    while len(current.children) != 0:
-        current = max(current.children, key=ucb1)
-    return current
 
 
-def rollout(node):
-    b_s = node.board_state
-    while True:
-        if b_s.terminal_test():
-            return -1 if b_s._has_liberties(b_s.player()) else 1
-        action = random.choice(b_s.actions())
-        b_s = b_s.result(action)
 
 
-def back_propogate(node,num):
-    while node is not None:
-        node.v +=num
-        node.n +=1
-        node = node.parent
-        num = -num
+
+
+
+
+
 
 
 class CustomPlayer(DataPlayer):
 
     def MCTS(self,state, epochs):
+        player = state.player()
+        def back_propogate(node, num):
+            current = node
+            while current is not None:
+                current.v += num
+                current.n += 1
+                current = current.parent
+                num = -num
+
+        def ucb1(node, c=1):
+            exploit = node.v / node.n if player == node.board_state.player() else node.n/(node.v + .1)
+            explore = c * math.sqrt(2 * math.log(node.parent.n, math.e) / node.n)
+            return explore + exploit
+
+        def traverse(node):
+            current = node
+            while len(current.children) != 0:
+                current = max(current.children, key=ucb1)
+            return current
+
+        def rollout(node):
+            b_s = node.board_state
+            while True:
+                if b_s.terminal_test():
+                    return -1 if b_s._has_liberties(b_s.player()) else 1
+                action = random.choice(b_s.actions())
+                b_s = b_s.result(action)
+
+
         root = TreeNode(state,None,None)
 
         for i in range(epochs):
             leaf = traverse(root)
-            if leaf.n == 0:
+            if leaf.n == 1: # i initiate ech node with n value 1 so it doesnt blow up obc1 function since n in denominator
                 simulation_result = rollout(leaf)
             else:
                 leaf.children = [TreeNode(leaf.board_state.result(action), leaf,action) for action in leaf.board_state.actions()]
@@ -69,38 +79,37 @@ class CustomPlayer(DataPlayer):
 
             back_propogate(leaf,simulation_result)
 
-        best =  max(root.children, key= lambda x: x.v)
-        node_vals = [node.v for node in root.children]
-        # print(node_vals)
+        best =  max(root.children, key= lambda x : x.v/x.n)
+        node_vals = [round(node.v/node.n,3) for node in root.children]
+
         print("move {} vals: {}".format(int(state.ply_count/2),node_vals))
         return best.action
 
 
 
 
+
+
+
+
+
+
+
     def get_action(self, state):
-
-
-        # start_time = time.time()
-        # print("SEARCHING")
-        # move = self.alpha_beta_search(state,depth)
-        # print("FOUND MOVE")
-
-        # print("--- %s seconds ---" % (time.time() - start_time))
-        # self.queue.put(move)
-
 
         if state.ply_count < 2:
             self.queue.put(random.choice(state.actions()))
         else:
-            # start_time = time.time()
-
-            self.queue.put(self.MCTS(state, 35))
-            # self.queue.put(self.MCTS(state,35))
+            self.queue.put(self.MCTS(state, 600))
 
 
-            # print(str(time.time()-start_time)[:6])
-            # self.queue.put(self.minimax(state,depth))
+
+
+
+
+
+
+
 
     def alpha_beta_search(self,gameState, depth):
 

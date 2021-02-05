@@ -39,7 +39,7 @@ def _run_matches(matches, name, num_processes=NUM_PROCS, debug=False):
     i = 1
     for result in pool.imap_unordered(play, matches):
         elapsed_time = time.time()-elapsed_time
-        print("{}-------------------- WIN {} --------------------".format(i,str(elapsed_time)[:4]) if result[0].name == name else '{}----- LOS {} -----'.format(i,str(elapsed_time)[:4]), end="")
+        print("{}-------------------- WIN {} --------------------".format(i,str(elapsed_time)[:4]) if result[0].name == name else '{}--------------- LOS {} ---------------'.format(i,str(elapsed_time)[:4]), end="")
         print()
         results.append(result)
         elapsed_time = time.time()
