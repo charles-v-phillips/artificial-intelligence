@@ -14,7 +14,7 @@ from multiprocessing.pool import ThreadPool as Pool
 from isolation import Isolation, Agent, play
 from sample_players import RandomPlayer, GreedyPlayer, MinimaxPlayer
 from my_custom_player import CustomPlayer
-
+import time
 logger = logging.getLogger(__name__)
 
 NUM_PROCS = 1
@@ -35,9 +35,15 @@ def _run_matches(matches, name, num_processes=NUM_PROCS, debug=False):
     results = []
     pool = Pool(1) if debug else Pool(num_processes)
     print("Running {} games:".format(len(matches)))
+    elapsed_time = time.time()
+    i = 1
     for result in pool.imap_unordered(play, matches):
-        print("+" if result[0].name == name else '-', end="")
+        elapsed_time = time.time()-elapsed_time
+        print("{}-------------------- WIN {} --------------------".format(i,str(elapsed_time)[:4]) if result[0].name == name else '{}----- LOS {} -----'.format(i,str(elapsed_time)[:4]), end="")
+        print()
         results.append(result)
+        elapsed_time = time.time()
+        i+=1
     print()
     return results
 
@@ -46,7 +52,7 @@ def make_fair_matches(matches, results):
     new_matches = []
     for _, game_history, match_id in results:
         if len(game_history) < 2:
-            logger.warn(textwrap.dedent("""\
+            logger.warning(textwrap.dedent("""\
                 Unable to duplicate match {}
                 -- one of the players forfeit at the first move
                 """.format(match_id)))

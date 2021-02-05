@@ -5,6 +5,7 @@ import logging
 import pickle
 import random
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -132,4 +133,5 @@ class MinimaxPlayer(BasePlayer):
         opp_loc = state.locs[1 - self.player_id]
         own_liberties = state.liberties(own_loc)
         opp_liberties = state.liberties(opp_loc)
+
         return len(own_liberties) - len(opp_liberties)

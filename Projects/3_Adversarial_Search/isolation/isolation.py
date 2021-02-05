@@ -9,6 +9,8 @@ from typing import NamedTuple
 # board array dimensions and bitboard size
 _WIDTH = 11
 _HEIGHT = 9
+# _WIDTH = 6
+# _HEIGHT = 6
 _SIZE = (_WIDTH + 2) * _HEIGHT - 2
 
 # Build the prototype bitboard, which is a bitstring (e.g., 1110011100111
@@ -178,6 +180,7 @@ class Isolation(NamedTuple('Isolation', [('board', int), ('ply_count', int), ('l
         return any(self.liberties(self.locs[player_id]))
 
 
+
 class DebugState(Isolation):
     """ Extend the Isolation game state class with utility methods for debugging &
     visualizing the fields in the data structure
@@ -250,3 +253,10 @@ class DebugState(Isolation):
             out.write(cell.format(sym))
         out.write("|" + os.linesep + rowsep + os.linesep)
         return '\n'.join(l[::-1] for l in out.getvalue().split('\n')[::-1]) + os.linesep
+
+if __name__ == '__main__':
+    board = Isolation()
+    board = board.result(5).result(7)
+
+    print(DebugState.from_state(board))
+    print(int(_SIZE/2))

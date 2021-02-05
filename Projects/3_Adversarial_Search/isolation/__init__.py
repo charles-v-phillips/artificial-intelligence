@@ -69,6 +69,7 @@ class TimedQueue:
 
     def put(self, item, block=True, timeout=None):
         if self.__stop_time and time.perf_counter() > self.__stop_time:
+            print("Stop Search Raised. Too much time taken?")
             raise StopSearch
         if self.__receiver.poll():
             self.__receiver.recv()
@@ -132,7 +133,7 @@ def _play(agents, game_state, time_limit, match_id, debug=False):
             action = fork_get_action(game_state, players[active_idx], time_limit, debug)
         except Empty:
             status = Status.TIMEOUT
-            logger.warn(textwrap.dedent("""\
+            logger.warning(textwrap.dedent("""\
                 The queue was empty after get_action() was called. This means that either
                 the queue.put() method was not called by the get_action() method, or that
                 the queue was empty after the procedure was killed due to timeout {} seconds
@@ -193,4 +194,5 @@ def _request_action(agent, queue, game_state):
         queue.start_timer()
         agent.get_action(game_state)
     except StopSearch:
+        print("TOO MUCH TIME PASSED BITCH")
         pass
