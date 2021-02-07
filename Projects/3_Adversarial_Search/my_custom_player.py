@@ -18,35 +18,21 @@ class TreeNode:
         self.action = action
         self.untried_actions = board_state.actions()
     def is_fully_expanded(self):
-        if len(self.untried_actions) == 0:
-            return True
-        return False
-
-
-
-
-
-
-
-
-
-
-
+        return len(self.untried_actions) == 0
 
 
 class CustomPlayer(DataPlayer):
 
     def MCTS2(self,state):
-        root = TreeNode(state,None,None)
-        active_player = state.player()
+
 
         def ucb2(node,c):
             expand = node.q/node.n
-            explore = c*math.sqrt(2*math.log(node.parent.n,2)/(node.n + 1))
+            explore = c*math.sqrt(2*math.log(node.parent.n,2)/(node.n))
             return expand + explore
 
         def best_child(node):
-            return  max(node.children,key = lambda x : ucb2(x,1))
+            return max(node.children,key = lambda x : ucb2(x,1))
 
         def tree_policy(node):
             current = node
@@ -81,6 +67,8 @@ class CustomPlayer(DataPlayer):
                 val = 1-val
                 current = current.parent
 
+        root = TreeNode(state, None, None)
+        active_player = state.player()
 
         start_time = time.time()
         iter = 0
@@ -105,20 +93,13 @@ class CustomPlayer(DataPlayer):
 
 
 
-
-
-
-
-
-
-
-
-
-
     def get_action(self, state):
+        debug_board = DebugState.from_state(state)
+        # print(debug_board)
         if state.ply_count < 2:
             self.queue.put(random.choice(state.actions()))
         else:
+
             self.queue.put(self.MCTS2(state))
 
 
