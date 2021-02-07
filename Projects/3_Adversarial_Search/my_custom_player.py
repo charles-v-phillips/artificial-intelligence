@@ -9,13 +9,18 @@ depth = 5
 
 
 class TreeNode:
-    def __init__(self, boardState,parent,action):
-        self.board_state = boardState
+    def __init__(self,board_state,parent,action):
+        self.q = 0
+        self.n = 0
         self.children = []
-        self.n = 1
         self.parent = parent
-        self.v = 0
+        self.board_state = board_state
         self.action = action
+        self.untried_actions = board_state.actions()
+    def is_fully_expanded(self):
+        if len(self.untried_actions) == 0:
+            return True
+        return False
 
 
 
@@ -31,59 +36,74 @@ class TreeNode:
 
 class CustomPlayer(DataPlayer):
 
-    def MCTS(self,state, epochs):
-        player = state.player()
-        def back_propogate(node, num):
-            current = node
-            while current is not None:
-                current.v += num
-                current.n += 1
-                current = current.parent
-                num = -num
+    def MCTS2(self,state):
+        root = TreeNode(state,None,None)
+        active_player = state.player()
 
-        def ucb1(node, c=1):
-            exploit = node.v / node.n if player == node.board_state.player() else node.n/(node.v + .1)
-            explore = c * math.sqrt(2 * math.log(node.parent.n, math.e) / node.n)
-            return explore + exploit
+        def ucb2(node,c):
+            expand = node.q/node.n
+            explore = c*math.sqrt(2*math.log(node.parent.n,2)/(node.n + 1))
+            return expand + explore
 
-        def traverse(node):
+        def best_child(node):
+            return  max(node.children,key = lambda x : ucb2(x,1))
+
+        def tree_policy(node):
             current = node
-            while len(current.children) != 0:
-                current = max(current.children, key=ucb1)
+            while not current.board_state.terminal_test():
+                if not current.is_fully_expanded():
+                    return expand(current)
+                else:
+                    current = best_child(current)
             return current
 
-        def rollout(node):
-            b_s = node.board_state
-            while True:
-                if b_s.terminal_test():
-                    return -1 if b_s._has_liberties(b_s.player()) else 1
-                action = random.choice(b_s.actions())
-                b_s = b_s.result(action)
+        def expand(node):
+            a = random.choice(node.untried_actions)
+            node.untried_actions.remove(a)
+            child = TreeNode(node.board_state.result(a), node, a)
+            node.children.append(child)
+            return child
+
+        def default_policy(b_state):
+            s = b_state
+            while not s.terminal_test():
+                a = random.choice(s.actions())
+                s = s.result(a)
+
+            if s._has_liberties(active_player):return 1
+            return 0
+
+        def backup(node,val):
+            current = node
+            while current is not None:
+                current.q +=val
+                current.n +=1
+                val = 1-val
+                current = current.parent
 
 
-        root = TreeNode(state,None,None)
+        start_time = time.time()
+        iter = 0
 
-        for i in range(epochs):
-            leaf = traverse(root)
-            if leaf.n == 1: # i initiate ech node with n value 1 so it doesnt blow up obc1 function since n in denominator
-                simulation_result = rollout(leaf)
-            else:
-                leaf.children = [TreeNode(leaf.board_state.result(action), leaf,action) for action in leaf.board_state.actions()]
-                if len(leaf.children) != 0:
-                    leaf = leaf.children[0]
-                    simulation_result = rollout(leaf)
-                else: #this should mean we are at a terminal node
-                    # print(DebugState.from_state(leaf.board_state))
-                    simulation_result = -1 if leaf.board_state._has_liberties(leaf.board_state.player()) else 1
+        while time.time() - start_time < .14:
 
 
-            back_propogate(leaf,simulation_result)
+            root_dummy = root
 
-        best =  max(root.children, key= lambda x : x.v/x.n)
-        node_vals = [round(node.v/node.n,3) for node in root.children]
+            leaf = tree_policy(root_dummy)
+            reward = default_policy(leaf.board_state)
+            backup(leaf,reward)
+            iter+=1
 
-        print("move {} vals: {}".format(int(state.ply_count/2),node_vals))
-        return best.action
+
+        node_vals = [round(ucb2(node,0), 3) for node in root.children]
+
+        print("move {} vals: {}, {} iterations".format(int(state.ply_count / 2), node_vals,iter))
+        best_child = max(root.children,key = lambda x : ucb2(x,0))
+        return best_child.action
+
+
+
 
 
 
@@ -96,11 +116,10 @@ class CustomPlayer(DataPlayer):
 
 
     def get_action(self, state):
-
         if state.ply_count < 2:
             self.queue.put(random.choice(state.actions()))
         else:
-            self.queue.put(self.MCTS(state, 600))
+            self.queue.put(self.MCTS2(state))
 
 
 
@@ -173,6 +192,7 @@ class CustomPlayer(DataPlayer):
             if v >= best_score:
                 best_score = v
                 best_move = a
+        print(best_move)
         return best_move
 
     def score(self, state):
@@ -206,7 +226,16 @@ class CustomPlayer(DataPlayer):
 
 
 if __name__ == '__main__':
-    b = Isolation().result(5).result(27)
-    c = CustomPlayer(0)
-    best_move = c.MCTS(b,30)
-    print(best_move)
+    move_0_state = Isolation()
+    move_1_state = move_0_state.result(random.choice(move_0_state.actions()))
+    move_2_state = move_1_state.result(random.choice(move_1_state.actions()))
+    terminal_state = move_2_state
+    while not terminal_state.terminal_test():
+        terminal_state = terminal_state.result(random.choice(terminal_state.actions()))
+    terminal_state = terminal_state
+    debug_board = DebugState.from_state(terminal_state)
+    print(debug_board)
+    p = CustomPlayer(terminal_state.player())
+    p.MCTS2(terminal_state)
+
+

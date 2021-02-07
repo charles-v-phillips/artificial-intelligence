@@ -209,7 +209,7 @@ class DebugState(Isolation):
     |   |   |   |   |   |   |   |   |   |   |   |
     + - + - + - + - + - + - + - + - + - + - + - +
     """
-    player_symbols=['1', '2']
+    player_symbols=['0', '1']
     
     @staticmethod
     def from_state(gamestate): return DebugState(gamestate.board, gamestate.ply_count, gamestate.locs)

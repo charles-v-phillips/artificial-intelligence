@@ -69,7 +69,7 @@ class TimedQueue:
 
     def put(self, item, block=True, timeout=None):
         if self.__stop_time and time.perf_counter() > self.__stop_time:
-            print("Stop Search Raised. Too much time taken?")
+            print("Stop Search Raised. Too much time taken")
             raise StopSearch
         if self.__receiver.poll():
             self.__receiver.recv()
@@ -194,5 +194,6 @@ def _request_action(agent, queue, game_state):
         queue.start_timer()
         agent.get_action(game_state)
     except StopSearch:
-        print("TOO MUCH TIME PASSED BITCH")
+        print("TOO MUCH TIME PASSED")
         pass
+

@@ -45,6 +45,7 @@ class CustomPlayerGetActionTest(BaseCustomPlayerTest):
 
     def test_get_action_terminal(self):
         """ get_action() calls self.queue.put() before timeout when the game is over """
+        print(DebugState.from_state(self.terminal_state))
         self._test_state(self.terminal_state)
 
 
